@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(ygoCardSimulator VERSION 0.1 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20) # Compile with C++20
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # If compiler can't do C++20, CMake stops with an error instead of quietly using older version
+set(CMAKE_CXX_EXTENSIONS OFF) # Strict standard C++20 (-std=c++20, not gnu++20) so compiler-specific extensions don't sneak in and break MSVC builds
 
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 
