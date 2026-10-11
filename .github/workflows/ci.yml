@@ -27,8 +27,13 @@ jobs:
         include:
           - os: ubuntu-latest
             qt_arch: linux_gcc_64
+            qt_version: '6.12.0' # matches local setup
           - os: windows-latest
             qt_arch: win64_msvc2022_64
+            # aqtinstall 3.3 can't read Qt's new Windows download layout (6.11+), so use 6.10.3,
+            # which is also the minimum CMakeLists.txt requires. Move to 6.12 once this is fixed:
+            # https://github.com/miurahr/aqtinstall/pull/1048
+            qt_version: '6.10.3'
 
     steps:
       - uses: actions/checkout@v7
@@ -41,11 +46,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev
 
-      # Must match Qt version used locally; also puts Qt on CMAKE_PREFIX_PATH
+      # Qt version comes from the matrix; also puts Qt on CMAKE_PREFIX_PATH
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.12.0'
+          version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qt_arch }}
           cache: true # later runs skip download
 
