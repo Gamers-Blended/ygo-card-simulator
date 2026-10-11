@@ -1,0 +1,82 @@
+# Builds the app on Linux and Windows for every PR and every push to main
+name: CI
+
+# When it runs: a push to main, any pull request, or by hand with "Run workflow" button
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # adds a manual "Run workflow" button in Actions tab
+
+# Workflow only needs to read repo
+permissions:
+  contents: read
+
+# A newer push to same branch/PR cancels run that's now outdated
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # let both OS jobs finish even if one fails
+      matrix: # 1 job definition becomes 2 jobs, 1 per entry. Each entry pairs an OS with Qt's name for that platform, because Qt calls them differently
+        include:
+          - os: ubuntu-latest
+            qt_arch: linux_gcc_64
+            qt_version: '6.12.0' # matches local setup
+          - os: windows-latest
+            qt_arch: win64_msvc2022_64
+            # aqtinstall 3.3 can't read Qt's new Windows download layout (6.11+), so use 6.10.3,
+            # which is also the minimum CMakeLists.txt requires. Move to 6.12 once this is fixed:
+            # https://github.com/miurahr/aqtinstall/pull/1048
+            qt_version: '6.10.3'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Qt Quick needs OpenGL headers on Linux (CMake error: WrapOpenGL not found)
+      # Windows doesn't need it as its OpenGL headers come with Visual Studio
+      - name: Install Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev
+
+      # Qt version comes from the matrix; also puts Qt on CMAKE_PREFIX_PATH
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true # later runs skip download
+
+      # Default generator: Makefiles + GCC on Linux, Visual Studio + MSVC on Windows
+      # Run CMake
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      # --config is for multi-config generators (Visual Studio); Makefiles ignore it
+      # Build
+      # Linux makes 1 build per folder, chosen when you configure
+      # Visual Studio builds Debug and Release from same folder, so it needs --config Release to know which one; Linux ignores flag
+      - name: Build
+        run: cmake --build build --config Release
+
+      # Launch without a window
+      # If app is still running when 5-second timer stops it (exit code 124), the step passes, so QML loaded
+      - name: Smoke test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set +e
+          QT_QPA_PLATFORM=offscreen timeout 5 ./build/appygoCardSimulator
+          code=$?
+          if [ "$code" -ne 124 ]; then
+            echo "App exited early with code $code (QML failed to load?)"
+            exit 1
+          fi
+          echo "App started and kept running"

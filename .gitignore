@@ -137,3 +137,8 @@ CMakeLists.txt.user*
 .uic/
 /build*/
 /.qtcreator/
+
+# ----------------------------------------------------------------------------
+# App user data (regenerable or personal, never commit)
+*.sav
+*.db
