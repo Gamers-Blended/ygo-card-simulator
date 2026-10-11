@@ -17,6 +17,7 @@ The owner is learning C++ through this repo, and understanding matters more than
 - Only commit or push when asked. The owner usually commits from Qt Creator's Git UI.
 - Commit message style: `type: summary` (e.g. `refactor: ...`, `config: ...`, `feat: ...`).
 - When a decision changes, update the design doc in the same branch.
+- CI (`.github/workflows/ci.yml`) builds on Linux and Windows and must pass before a PR merges. If you add a system package or Qt module, add it to the workflow too.
 
 ## Architecture rules (see design doc Sections 4–6)
 
