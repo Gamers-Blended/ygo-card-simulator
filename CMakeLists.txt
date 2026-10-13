@@ -20,6 +20,16 @@ set(CMAKE_CXX_STANDARD 20) # Compile with C++20
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # If compiler can't do C++20, CMake stops with an error instead of quietly using older version
 set(CMAKE_CXX_EXTENSIONS OFF) # Strict standard C++20 (-std=c++20, not gnu++20) so compiler-specific extensions don't sneak in and break MSVC builds
 
+# Odds engine: plain C++, deliberately declared before Qt is found so it can't depend on it
+# INTERFACE = header-only for now (nothing to compile); becomes STATIC once it has a .cpp
+add_library(ygo_odds INTERFACE)
+# Anything that links ygo_odds can write #include "odds/PackConfig.h"
+target_include_directories(ygo_odds INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Console demo: prints simulated pulls, no UI
+add_executable(odds_demo src/odds_demo/main.cpp)
+target_link_libraries(odds_demo PRIVATE ygo_odds)
+
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 
 qt_standard_project_setup(REQUIRES 6.10)
