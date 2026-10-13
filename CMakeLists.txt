@@ -1,5 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
 
+# vcpkg supplies third-party libraries (GoogleTest, nlohmann/json) listed in vcpkg.json
+# Toolchain file has to be set before project() because project() is where CMake sets up compiler
+# Qt itself still comes from Qt installer, not from vcpkg
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "vcpkg toolchain")
+endif()
+
+# Windows: build vcpkg libraries as static libs but use DLL C runtime (/MD), same runtime Qt's MSVC build uses
+# Mixing runtimes causes linker errors
+# Linux's default triplet (x64-linux) is already static
+if(WIN32 AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+    set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "vcpkg triplet")
+endif()
+
 project(ygoCardSimulator VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20) # Compile with C++20
