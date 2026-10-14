@@ -96,12 +96,13 @@ QML views bind to C++ models/objects exposed via `qmlRegisterType` or context pr
         { "rarity": "Ultra", "weight": 10 }
       ]
     }
-  ],
-  "foil_chance_per_slot": 0.05
+  ]
 }
 ```
 
 Odds tables will be supplied incrementally per set — the engine should be written against this schema from the start so new sets are a data change, not a code change.
+
+**Foil is a property of rarity, not a separate roll.** There is no per-slot foil chance. Whether a pulled card is foil comes from its rarity (in LOB: Super, Ultra and Secret Rare are foil; Rare and Common are not). Since only the guarantee slot can roll a foil rarity, "at most one foil per pack" falls out of the slot model with no extra rule. If a later set has foils that replace a filler card, model that as another slot with its own table, which is still a data change.
 
 ### Set: Legend of Blue Eyes White Dragon (LOB)
 
@@ -130,8 +131,7 @@ Supplied odds (converted to per-slot probabilities for the guarantee slot):
         { "rarity": "Rare",        "remainder": true }
       ]
     }
-  ],
-  "foil_chance_per_slot": 0.05
+  ]
 }
 ```
 
@@ -158,7 +158,7 @@ Weighted tables (like the generic example above) normalize to probabilities the 
 
 1. Pack asset appears; on tap/click, 9 `CardDelegate` items animate out from the pack using a `Behavior on x/y` or `ParallelAnimation`, fanning into position.
 2. Cards flip face-up one at a time (sequenced via `SequentialAnimation` + `PauseAnimation` between each), using a `RotationAnimation` on the `y` axis with a texture swap at 90°.
-3. On flip completion, if the revealed card is foil: trigger a QML `ParticleSystem` (sparkle) + emit a signal to C++ to play the chime SFX via miniaudio.
+3. On flip completion, if the revealed card's rarity is a foil rarity (e.g. Super/Ultra/Secret Rare): trigger a QML `ParticleSystem` (sparkle) + emit a signal to C++ to play the chime SFX via miniaudio.
 4. On full reveal, C++ backend triggers autosave (feature 6) before returning to binder/menu.
 5. Binder page turns (`BinderView.qml`) use a `PathView` or `SwipeView` with a page-curl-style `Transition` between pages.
 

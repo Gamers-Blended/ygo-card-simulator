@@ -1,5 +1,6 @@
-// Console demo for the odds engine. No Qt, no UI: it just prints what the engine sees.
-// For now it builds the LOB config by hand; later it will load data/LOB.json and open packs.
+// Console demo for odds engine
+// No Qt, no UI: just prints what engine sees
+// For now it builds LOB config by hand; later it will load data/LOB.json and open packs
 
 #include "odds/PackConfig.h"
 
@@ -7,7 +8,7 @@
 
 int main()
 {
-    // Designated initializers (C++20): each field is named, so this reads like the JSON.
+    // Designated initializers (C++20): each field is named, so this reads like the JSON
     const ygo::odds::PackConfig lob{
         .setCode = "LOB",
         .totalCardsPerPack = 9,
@@ -24,7 +25,6 @@ int main()
                 },
             },
         },
-        .foilChancePerSlot = 0.05,
     };
 
     std::cout << "Set " << lob.setCode << ": " << lob.totalCardsPerPack << " cards per pack, "
