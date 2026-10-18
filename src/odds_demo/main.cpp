@@ -2,28 +2,45 @@
 // No Qt, no UI: just prints what engine sees
 // For now it builds LOB config by hand; later it will load data/LOB.json and open packs
 
+#include "odds/Normalize.h"
 #include "odds/PackConfig.h"
 #include "odds/RawSlotTable.h"
 
 #include <iostream>
 
+// Alias for engine's namespace, only in this file (never put in a header)
+namespace odds = ygo::odds;
+
 namespace {
 
-// Prints how an entry's odds were written in the config, e.g. "1 in 36"
-void printRawOdds(const ygo::odds::RawRarityEntry& entry)
+// Prints how an entry's odds were written in config, e.g. "1 in 36"
+// Function reads caller's object instead of copying its string
+void printRawOdds(const odds::RawRarityEntry& entry)
 {
-    using ygo::odds::OddsKind;
-
     switch (entry.kind) {
-    case OddsKind::Weight:
+    case odds::OddsKind::Weight:
         std::cout << "weight " << entry.value;
         break;
-    case OddsKind::OneInN:
+    case odds::OddsKind::OneInN:
         std::cout << "1 in " << entry.value;
         break;
-    case OddsKind::Remainder:
+    case odds::OddsKind::Remainder:
         std::cout << "remainder";
         break;
+    }
+}
+
+// Prints a raw slot next to its normalized probabilities, one line per entry
+void printSlot(const odds::RawSlotTable& raw)
+{
+    const odds::SlotTable normalized = odds::normalize(raw);
+
+    std::cout << "  Slot " << raw.slotIndex << ":\n";
+    // Same order in both tables, so entry i of one matches entry i of the other
+    for (std::size_t i = 0; i < raw.entries.size(); ++i) {
+        std::cout << "    " << raw.entries[i].rarity << ": ";
+        printRawOdds(raw.entries[i]);
+        std::cout << " -> " << normalized.entries[i].probability * 100 << "%\n";
     }
 }
 
@@ -31,55 +48,42 @@ void printRawOdds(const ygo::odds::RawRarityEntry& entry)
 
 int main()
 {
-    using ygo::odds::OddsKind;
-
     // LOB's guarantee slot as the config file writes it (design doc Section 7)
-    const ygo::odds::RawSlotTable lobRawSlot{
+    // Designated initializers (C++20): each field is named, so this reads like the JSON
+    const odds::RawSlotTable lobRawSlot{
         .slotIndex = 9,
         .entries = {
-            {.rarity = "Secret Rare", .kind = OddsKind::OneInN, .value = 36},
-            {.rarity = "Ultra Rare", .kind = OddsKind::OneInN, .value = 12},
-            {.rarity = "Super Rare", .kind = OddsKind::OneInN, .value = 6},
-            {.rarity = "Rare", .kind = OddsKind::Remainder},
+            {.rarity = "Secret Rare", .kind = odds::OddsKind::OneInN, .value = 36},
+            {.rarity = "Ultra Rare", .kind = odds::OddsKind::OneInN, .value = 12},
+            {.rarity = "Super Rare", .kind = odds::OddsKind::OneInN, .value = 6},
+            {.rarity = "Rare", .kind = odds::OddsKind::Remainder},
         },
     };
 
-    std::cout << "Raw slot " << lobRawSlot.slotIndex << " (as written in the config):\n";
-    for (const auto& entry : lobRawSlot.entries) {
-        std::cout << "    " << entry.rarity << ": ";
-        printRawOdds(entry);
-        std::cout << '\n';
-    }
-
-    // Designated initializers (C++20): each field is named, so this reads like the JSON
-    // The probabilities are converted by hand for now; step 2 will compute them from lobRawSlot
-    const ygo::odds::PackConfig lob{
+    const odds::PackConfig lob{
         .setCode = "LOB",
         .totalCardsPerPack = 9,
         .fillerSlots = 8,
         .fillerPool = "Common",
-        .guaranteeSlots = {
-            {
-                .slotIndex = 9,
-                .entries = {
-                    {.rarity = "Secret Rare", .probability = 1.0 / 36},
-                    {.rarity = "Ultra Rare", .probability = 1.0 / 12},
-                    {.rarity = "Super Rare", .probability = 1.0 / 6},
-                    {.rarity = "Rare", .probability = 26.0 / 36},
-                },
-            },
+        .guaranteeSlots = {odds::normalize(lobRawSlot)},
+    };
+
+    std::cout << "Set " << lob.setCode << ": " << lob.totalCardsPerPack << " cards per pack, "
+              << lob.fillerSlots << " filler (" << lob.fillerPool << ")\n";
+    printSlot(lobRawSlot);
+
+    // The generic weighted example from design doc Section 7, to exercise the Weight path
+    const odds::RawSlotTable weightedSlot{
+        .slotIndex = 9,
+        .entries = {
+            {.rarity = "Rare", .kind = odds::OddsKind::Weight, .value = 70},
+            {.rarity = "Super", .kind = odds::OddsKind::Weight, .value = 20},
+            {.rarity = "Ultra", .kind = odds::OddsKind::Weight, .value = 10},
         },
     };
 
-    std::cout << "\nSet " << lob.setCode << ": " << lob.totalCardsPerPack << " cards per pack, "
-              << lob.fillerSlots << " filler (" << lob.fillerPool << ")\n";
-
-    for (const auto& slot : lob.guaranteeSlots) {
-        std::cout << "  Slot " << slot.slotIndex << " (as the engine sees it):\n";
-        for (const auto& entry : slot.entries) {
-            std::cout << "    " << entry.rarity << ": " << entry.probability * 100 << "%\n";
-        }
-    }
+    std::cout << "\nWeighted example:\n";
+    printSlot(weightedSlot);
 
     return 0;
 }

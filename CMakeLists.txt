@@ -21,10 +21,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON) # If compiler can't do C++20, CMake stops wi
 set(CMAKE_CXX_EXTENSIONS OFF) # Strict standard C++20 (-std=c++20, not gnu++20) so compiler-specific extensions don't sneak in and break MSVC builds
 
 # Odds engine: plain C++, deliberately declared before Qt is found so it can't depend on it
-# INTERFACE = header-only for now (nothing to compile); becomes STATIC once it has a .cpp
-add_library(ygo_odds INTERFACE)
-# Anything that links ygo_odds can write #include "odds/PackConfig.h"
-target_include_directories(ygo_odds INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# STATIC = compiled once into a library archive that gets copied into each program linking it
+# Headers are listed so IDEs like Qt Creator show them under target
+add_library(ygo_odds STATIC
+    src/odds/Normalize.cpp
+    src/odds/Normalize.h
+    src/odds/PackConfig.h
+    src/odds/RawSlotTable.h
+)
+# PUBLIC: ygo_odds' own .cpp files and anything linking ygo_odds can write #include "odds/..."
+target_include_directories(ygo_odds PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Console demo: prints simulated pulls, no UI
 add_executable(odds_demo src/odds_demo/main.cpp)

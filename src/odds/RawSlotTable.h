@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+// Raw records exactly what source says, in its own terms
+// Keeps data/*.json easy to check against printed odds
+
 namespace ygo::odds {
 
 // How a config file writes the chance of one rarity

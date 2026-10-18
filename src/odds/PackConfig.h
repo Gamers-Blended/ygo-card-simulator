@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+// Normalised is the only form engine rolls on
+// Everything is already a probability, so there's 1 roll path for every set
+
 namespace ygo::odds {
 
 // One possible result of a slot, e.g. "Super Rare" with probability 1/6.
