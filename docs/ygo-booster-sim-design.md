@@ -135,11 +135,16 @@ Supplied odds (converted to per-slot probabilities for the guarantee slot):
 }
 ```
 
-**Implementation note:** advertised "1 in N packs" odds are the *overall* chance of seeing that rarity in a pack, so the engine uses each `1/N` directly as that rarity's probability. The entry marked `"remainder": true` gets whatever probability is left over (exactly one entry per table may be the remainder). Then **one uniform roll** in `[0, 1)` picks the rarity by walking the cumulative probabilities.
+**Implementation note:** advertised "1 in N packs" odds are the *overall* chance of seeing that rarity in a pack, so the engine uses each `1/N` directly as that rarity's probability. The entry marked `"remainder": true` gets whatever probability is left over (a "1 in N" table must have exactly one remainder entry, so its chances always add up to 1). Then **one uniform roll** in `[0, 1)` picks the rarity by walking the cumulative probabilities.
 
 Do **not** model this as sequential "roll down from rarest" checks (roll 1/36 for Secret, on a miss roll 1/12 for Ultra, and so on). Each later roll only happens when the earlier ones missed, so it under-delivers every rarity after the first: Ultra comes out at (35/36)·(1/12) ≈ 8.10% (≈1:12.3) instead of 8.33%, and Super at ≈ 14.85% (≈1:6.7) instead of 16.67%.
 
-Weighted tables (like the generic example above) normalize to probabilities the same way (`weight / sum of weights`), so after loading, both config styles become the same internal probability table and use the same single-roll code path. At load time, validate that the explicit probabilities sum to at most 1, and reject the config otherwise.
+Weighted tables (like the generic example above) normalize to probabilities the same way (`weight / sum of weights`), so after loading, both config styles become the same internal probability table and use the same single-roll code path. At load time, validate each table and reject the config (throw `ConfigError`) if:
+- it has no entries, or an entry has no rarity name;
+- a weight isn't > 0, or a "1 in N" has N < 1;
+- it mixes weights with "1 in N" / remainder entries;
+- a "1 in N" table doesn't have exactly one remainder entry;
+- the "1 in N" probabilities add up to more than 1 (with a 1e-9 tolerance for floating-point rounding).
 
 **Key edge case:** seed `std::mt19937` once per session (or persist RNG state) — do not reseed per pack, or rapid "open all" clicks with a time-based seed can produce correlated results.
 

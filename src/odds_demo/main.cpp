@@ -2,11 +2,13 @@
 // No Qt, no UI: just prints what engine sees
 // For now it builds LOB config by hand; later it will load data/LOB.json and open packs
 
+#include "odds/ConfigError.h"
 #include "odds/Normalize.h"
 #include "odds/PackConfig.h"
 #include "odds/RawSlotTable.h"
 
 #include <iostream>
+#include <vector>
 
 // Alias for engine's namespace, only in this file (never put in a header)
 namespace odds = ygo::odds;
@@ -84,6 +86,40 @@ int main()
 
     std::cout << "\nWeighted example:\n";
     printSlot(weightedSlot);
+
+    // Tables normalize() must reject, to show validation and exception handling
+    const std::vector<odds::RawSlotTable> badSlots{
+        {.slotIndex = 9,
+         .entries = {
+             {.rarity = "Super Rare", .kind = odds::OddsKind::OneInN, .value = 0},
+             {.rarity = "Rare", .kind = odds::OddsKind::Remainder},
+         }},
+        {.slotIndex = 9,
+         .entries = {
+             {.rarity = "Super Rare", .kind = odds::OddsKind::OneInN, .value = 6},
+             {.rarity = "Rare", .kind = odds::OddsKind::Weight, .value = 70},
+         }},
+        {.slotIndex = 9,
+         .entries = {
+             {.rarity = "Super Rare", .kind = odds::OddsKind::OneInN, .value = 2},
+             {.rarity = "Ultra Rare", .kind = odds::OddsKind::OneInN, .value = 1},
+             {.rarity = "Rare", .kind = odds::OddsKind::Remainder},
+         }},
+        {.slotIndex = 9,
+         .entries = {
+             {.rarity = "Super Rare", .kind = odds::OddsKind::OneInN, .value = 6},
+         }},
+    };
+
+    std::cout << "\nInvalid tables:\n";
+    for (const auto& bad : badSlots) {
+        try {
+            odds::normalize(bad);
+            std::cout << "  accepted (this is a bug!)\n";
+        } catch (const odds::ConfigError& error) {
+            std::cout << "  rejected: " << error.what() << '\n';
+        }
+    }
 
     return 0;
 }

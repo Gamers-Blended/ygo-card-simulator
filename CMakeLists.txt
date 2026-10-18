@@ -24,6 +24,7 @@ set(CMAKE_CXX_EXTENSIONS OFF) # Strict standard C++20 (-std=c++20, not gnu++20) 
 # STATIC = compiled once into a library archive that gets copied into each program linking it
 # Headers are listed so IDEs like Qt Creator show them under target
 add_library(ygo_odds STATIC
+    src/odds/ConfigError.h
     src/odds/Normalize.cpp
     src/odds/Normalize.h
     src/odds/PackConfig.h
