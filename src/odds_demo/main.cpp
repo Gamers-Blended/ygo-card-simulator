@@ -5,9 +5,12 @@
 #include "odds/ConfigError.h"
 #include "odds/Normalize.h"
 #include "odds/PackConfig.h"
+#include "odds/PackOpener.h"
 #include "odds/RawSlotTable.h"
 
 #include <iostream>
+#include <map>
+#include <string>
 #include <vector>
 
 // Alias for engine's namespace, only in this file (never put in a header)
@@ -119,6 +122,25 @@ int main()
         } catch (const odds::ConfigError& error) {
             std::cout << "  rejected: " << error.what() << '\n';
         }
+    }
+
+    // Roll LOB's guarantee slot many times and compare how often each rarity came up with its odds
+    // One PackOpener for the whole run: it's seeded once, never per roll
+    odds::PackOpener opener;
+    const odds::SlotTable& lobSlot = lob.guaranteeSlots.front();
+    constexpr int kRolls = 36000;
+
+    std::map<std::string, int> counts; // rarity -> how many times it was rolled
+    for (int i = 0; i < kRolls; ++i) {
+        ++counts[opener.rollSlot(lobSlot)];
+    }
+
+    std::cout << "\nRolled LOB slot " << lobSlot.slotIndex << " " << kRolls << " times:\n";
+    for (const auto& entry : lobSlot.entries) {
+        const int count = counts[entry.rarity];
+        const double observed = 100.0 * count / kRolls;
+        std::cout << "    " << entry.rarity << ": " << count << " (" << observed << "%, expected "
+                  << entry.probability * 100 << "%)\n";
     }
 
     return 0;

@@ -28,6 +28,8 @@ add_library(ygo_odds STATIC
     src/odds/Normalize.cpp
     src/odds/Normalize.h
     src/odds/PackConfig.h
+    src/odds/PackOpener.cpp
+    src/odds/PackOpener.h
     src/odds/RawSlotTable.h
 )
 # PUBLIC: ygo_odds' own .cpp files and anything linking ygo_odds can write #include "odds/..."
