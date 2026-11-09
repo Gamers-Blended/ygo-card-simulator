@@ -127,7 +127,7 @@ int main()
     // Roll LOB's guarantee slot many times and compare how often each rarity came up with its odds
     // One PackOpener for the whole run: it's seeded once, never per roll
     odds::PackOpener opener;
-    const odds::SlotTable& lobSlot = lob.guaranteeSlots.front();
+    const odds::SlotTable& lobSlot = lob.guaranteeSlots.front(); // Avoid making a copy
     constexpr int kRolls = 36000;
 
     std::map<std::string, int> counts; // rarity -> how many times it was rolled
@@ -141,6 +141,20 @@ int main()
         const double observed = 100.0 * count / kRolls;
         std::cout << "    " << entry.rarity << ": " << count << " (" << observed << "%, expected "
                   << entry.probability * 100 << "%)\n";
+    }
+
+    // Open whole packs with the same opener, so the RNG carries on from the rolls above
+    constexpr int kPacks = 5;
+
+    std::cout << "\nOpening " << kPacks << " LOB packs:\n";
+    for (int i = 1; i <= kPacks; ++i) {
+        const std::vector<std::string> pack = opener.openPack(lob);
+
+        std::cout << "  Pack " << i << ":";
+        for (const auto& rarity : pack) {
+            std::cout << " [" << rarity << "]";
+        }
+        std::cout << '\n';
     }
 
     return 0;
