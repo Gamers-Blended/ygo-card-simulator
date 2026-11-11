@@ -39,6 +39,11 @@ target_include_directories(ygo_odds PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_executable(odds_demo src/odds_demo/main.cpp)
 target_link_libraries(odds_demo PRIVATE ygo_odds)
 
+# Unit tests live in tests/CMakeLists.txt
+# enable_testing() has to come first, so `ctest` run from the build folder finds them
+enable_testing()
+add_subdirectory(tests)
+
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 
 qt_standard_project_setup(REQUIRES 6.10)
