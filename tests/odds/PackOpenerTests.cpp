@@ -1,12 +1,13 @@
-// Tests for PackOpener: rolling one slot and laying out a whole pack
-// Long-run frequency tests (fixed seed, tolerance) come in a later step
+// Tests for PackOpener: rolling one slot, laying out a whole pack, and long-run rarity frequencies
 
 #include "odds/ConfigError.h"
 #include "odds/PackOpener.h"
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <cstdint>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -134,4 +135,39 @@ TEST(PackOpener, RejectsSameSlotIndexTwice)
 
     EXPECT_THROW(opener.openPack(packWith(7, {certainSlot(9, "Rare"), certainSlot(9, "Super Rare")})),
                  odds::ConfigError);
+}
+
+// --- Long-run frequencies ---
+
+TEST(PackOpener, LobRollsMatchAdvertisedOdds)
+{
+    // LOB's guarantee slot, already normalized (design doc Section 7)
+    const odds::SlotTable slot{
+        .slotIndex = 9,
+        .entries = {
+            {.rarity = "Secret Rare", .probability = 1.0 / 36},
+            {.rarity = "Ultra Rare", .probability = 1.0 / 12},
+            {.rarity = "Super Rare", .probability = 1.0 / 6},
+            {.rarity = "Rare", .probability = 26.0 / 36},
+        },
+    };
+    constexpr int kRolls = 1'000'000; // ' is a digit separator (C++14), for readability only
+
+    odds::PackOpener opener{kSeed};
+    std::map<std::string, int> counts;
+    for (int i = 0; i < kRolls; ++i) {
+        ++counts[opener.rollSlot(slot)];
+    }
+
+    for (const auto& entry : slot.entries) {
+        const double p = entry.probability;
+        const double observed = static_cast<double>(counts[entry.rarity]) / kRolls;
+
+        // How far the observed frequency typically wanders from p over kRolls rolls (standard deviation)
+        // Allowing 5 of those means a correct engine essentially never fails, whatever the compiler's
+        // distribution does with the seed, while a real odds bug (like "roll down from rarest",
+        // which gives Super Rare ~14.85% instead of 16.67%) is far outside it
+        const double sigma = std::sqrt(p * (1.0 - p) / kRolls);
+        EXPECT_NEAR(observed, p, 5.0 * sigma) << entry.rarity;
+    }
 }
