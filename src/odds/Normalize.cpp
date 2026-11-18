@@ -12,7 +12,7 @@ namespace ygo::odds {
 namespace {
 
 // 1-in-N totals a tiny bit over 1 still count as 1, since doubles can't hold most fractions
-// exactly (e.g. 1/3 + 1/3 + 1/3 can come out as 1.0000000000000002)
+// exactly (e.g. 1/2 + 1/12 + 1/3 + 1/20 + 1/30 is exactly 1, but adds up to 1.0000000000000002)
 constexpr double kSumTolerance = 1e-9;
 
 // Builds error for a bad table, prefixed with slot so message points into config

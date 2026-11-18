@@ -1,12 +1,44 @@
 // Tests for normalize(): raw config odds -> probabilities (design doc Section 7)
 
+#include "odds/ConfigError.h"
 #include "odds/Normalize.h"
 
 #include <gtest/gtest.h>
 
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace odds = ygo::odds;
 
 namespace {
+
+// Short builders, so each test shows only the entries it's about
+odds::RawRarityEntry weight(const std::string& rarity, double value)
+{
+    return {.rarity = rarity, .kind = odds::OddsKind::Weight, .value = value};
+}
+
+odds::RawRarityEntry oneIn(const std::string& rarity, double n)
+{
+    return {.rarity = rarity, .kind = odds::OddsKind::OneInN, .value = n};
+}
+
+odds::RawRarityEntry remainder(const std::string& rarity)
+{
+    return {.rarity = rarity, .kind = odds::OddsKind::Remainder};
+}
+
+// A slot 9 table holding the given entries
+// entries is taken by value and moved in: the caller's temporary list is handed over, not copied
+odds::RawSlotTable tableOf(std::vector<odds::RawRarityEntry> entries)
+{
+    return {.slotIndex = 9, .entries = std::move(entries)};
+}
+
+constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+constexpr double kInfinity = std::numeric_limits<double>::infinity();
 
 // Computed doubles are compared with a tolerance, never with ==
 constexpr double kTolerance = 1e-12;
@@ -75,4 +107,97 @@ TEST(Normalize, ProbabilitiesAddUpToOne)
     }
 
     EXPECT_NEAR(total, 1.0, kTolerance);
+}
+
+// --- Valid edge cases ---
+
+TEST(Normalize, RemainderAloneIsCertain)
+{
+    const odds::SlotTable slot = odds::normalize(tableOf({remainder("Rare")}));
+
+    ASSERT_EQ(slot.entries.size(), 1u);
+    EXPECT_NEAR(slot.entries[0].probability, 1.0, kTolerance);
+}
+
+TEST(Normalize, OneInNSummingToOneWithRoundingIsAccepted)
+{
+    // Exactly 1 on paper, but 1.0000000000000002 in doubles: the tolerance must let it through,
+    // and the remainder must be clamped to 0, not a tiny negative
+    const odds::RawSlotTable raw = tableOf({oneIn("A", 2), oneIn("B", 12), oneIn("C", 3), oneIn("D", 20),
+                                            oneIn("E", 30), remainder("Rare")});
+
+    const odds::SlotTable slot = odds::normalize(raw);
+
+    ASSERT_EQ(slot.entries.size(), 6u);
+    EXPECT_GE(slot.entries[5].probability, 0.0);
+    EXPECT_NEAR(slot.entries[5].probability, 0.0, kTolerance);
+}
+
+// --- Rejected tables (each one is a rule listed in Normalize.h) ---
+
+TEST(Normalize, RejectsEmptyTable)
+{
+    EXPECT_THROW(odds::normalize(tableOf({})), odds::ConfigError);
+}
+
+TEST(Normalize, RejectsEntryWithoutRarity)
+{
+    EXPECT_THROW(odds::normalize(tableOf({remainder("")})), odds::ConfigError);
+}
+
+TEST(Normalize, RejectsWeightThatIsNotPositive)
+{
+    for (const double bad : {0.0, -1.0, kNaN, kInfinity}) {
+        // SCOPED_TRACE adds the value to any failure message, so you can tell which one failed
+        SCOPED_TRACE(bad);
+        EXPECT_THROW(odds::normalize(tableOf({weight("Rare", bad)})), odds::ConfigError);
+    }
+}
+
+TEST(Normalize, RejectsOneInNBelowOne)
+{
+    for (const double bad : {0.0, 0.5, -6.0, kNaN, kInfinity}) {
+        SCOPED_TRACE(bad);
+        EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", bad), remainder("Rare")})),
+                     odds::ConfigError);
+    }
+}
+
+TEST(Normalize, RejectsWeightsMixedWithOneInN)
+{
+    EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", 6), weight("Rare", 70)})), odds::ConfigError);
+}
+
+TEST(Normalize, RejectsWeightsMixedWithRemainder)
+{
+    EXPECT_THROW(odds::normalize(tableOf({weight("Super Rare", 30), remainder("Rare")})), odds::ConfigError);
+}
+
+TEST(Normalize, RejectsOneInNWithoutRemainder)
+{
+    EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", 6)})), odds::ConfigError);
+}
+
+TEST(Normalize, RejectsTwoRemainders)
+{
+    EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", 6), remainder("Rare"), remainder("Common")})),
+                 odds::ConfigError);
+}
+
+TEST(Normalize, RejectsOneInNAddingUpToMoreThanOne)
+{
+    EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", 2), oneIn("Ultra Rare", 1), remainder("Rare")})),
+                 odds::ConfigError);
+}
+
+TEST(Normalize, ErrorMessageNamesTheSlotAndRarity)
+{
+    try {
+        odds::normalize(tableOf({oneIn("Super Rare", 0), remainder("Rare")}));
+        FAIL() << "expected ConfigError";
+    } catch (const odds::ConfigError& error) {
+        const std::string message = error.what();
+        EXPECT_NE(message.find("slot 9"), std::string::npos) << message;
+        EXPECT_NE(message.find("Super Rare"), std::string::npos) << message;
+    }
 }
