@@ -6,6 +6,7 @@ find_package(GTest CONFIG REQUIRED)
 
 add_executable(odds_tests
     odds/NormalizeTests.cpp
+    odds/PackOpenerTests.cpp
 )
 # gtest_main supplies main(), which runs every TEST() in the program
 target_link_libraries(odds_tests PRIVATE ygo_odds GTest::gtest_main)

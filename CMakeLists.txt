@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18) # 3.18: gtest_discover_tests(DISCOVERY_MODE PRE_TEST)
 
 # vcpkg supplies third-party libraries (GoogleTest, nlohmann/json) listed in vcpkg.json
 # Toolchain file has to be set before project() because project() is where CMake sets up compiler

@@ -38,7 +38,7 @@ ygoprodeck's API guide requires:
 | Distribution baseline | Portable zip (Windows) + AppImage (Linux) | Installer/package manager entries are a later, optional polish step |
 | Qt linking | **Dynamic linking** | Avoids LGPL static-linking obligations; use `windeployqt` / `linuxdeployqt` to bundle Qt libs alongside the exe |
 | Small dependency linking | **Static** (nlohmann/json, SQLite, miniaudio, cpr) | These are header-only or permissively licensed; static linking simplifies distribution with no licensing complications |
-| Dependency management | **vcpkg manifest mode** (`vcpkg.json`) | Reproducible, isolated per-project installs; single source of truth for local + CI builds — avoids "classic mode" version drift between machines |
+| Dependency management | **vcpkg manifest mode** (`vcpkg.json`) | Reproducible, isolated per-project installs; single source of truth for local + CI builds — avoids "classic mode" version drift between machines. GoogleTest is an optional `tests` feature, enabled by the CMake option `YGO_BUILD_TESTS` (ON by default) |
 | Sparkle VFX | **QML `ParticleSystem`** | Native QtQuick particle module, no custom shader needed for stage 7 |
 | Save file location | **OS-standard convention** — see Section 8 | Matches user expectations on each platform; avoids polluting install directory or home folder root |
 
