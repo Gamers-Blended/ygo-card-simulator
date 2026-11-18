@@ -14,6 +14,15 @@ if(WIN32 AND NOT DEFINED VCPKG_TARGET_TRIPLET)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "vcpkg triplet")
 endif()
 
+# ON by default so a plain configure builds the tests; pass -DYGO_BUILD_TESTS=OFF to skip them
+# (and skip downloading GoogleTest)
+option(YGO_BUILD_TESTS "Build unit tests" ON)
+if(YGO_BUILD_TESTS)
+    # Asks vcpkg to also install the "tests" feature from vcpkg.json (gtest)
+    # Has to be set before project(), because that's when vcpkg installs packages
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
+
 project(ygoCardSimulator VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20) # Compile with C++20
@@ -41,8 +50,10 @@ target_link_libraries(odds_demo PRIVATE ygo_odds)
 
 # Unit tests live in tests/CMakeLists.txt
 # enable_testing() has to come first, so `ctest` run from the build folder finds them
-enable_testing()
-add_subdirectory(tests)
+if(YGO_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Quick)
 

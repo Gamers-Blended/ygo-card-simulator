@@ -34,7 +34,7 @@ TEST(Normalize, LobOneInNOddsBecomeProbabilities)
 
     EXPECT_EQ(slot.slotIndex, 9);
     // ASSERT stops this test if it fails: indexing entries[3] below would be out of bounds
-    ASSERT_EQ(slot.entries.size(), 4u);
+    ASSERT_EQ(slot.entries.size(), 4u); // u suffix for unsigned int, .size() returns std::vector<...>::size_type
 
     EXPECT_EQ(slot.entries[0].rarity, "Secret Rare");
     EXPECT_NEAR(slot.entries[0].probability, 1.0 / 36, kTolerance);

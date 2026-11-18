@@ -15,4 +15,17 @@ Stage 0
 - Reconfigure Qt Creator's build folder: **Build** → **Clear CMake Configuration**, **Run CMake**
 
 Stage 1
-- To try demo: `~/Qt/Tools/CMake/bin/cmake --build build/cli && ./build/cli/odds_demo`
+- To try demo:
+```
+~/Qt/Tools/CMake/bin/cmake --build build/cli && ./build/cli/odds_demo
+```
+- To run tests:
+```
+~/Qt/Tools/CMake/bin/cmake --build build/cli
+~/Qt/Tools/CMake/bin/ctest --test-dir build/cli --output-on-failure
+```
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Or run `./build/cli/tests/odds_tests`
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Or in Qt Creator, Tools > Tests > Run All Tests
