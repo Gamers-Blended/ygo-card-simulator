@@ -9,7 +9,7 @@ add_executable(odds_tests
     odds/PackOpenerTests.cpp
 )
 # gtest_main supplies main(), which runs every TEST() in the program
-target_link_libraries(odds_tests PRIVATE ygo_odds GTest::gtest_main)
+target_link_libraries(odds_tests PRIVATE ygo_odds ygo_warnings GTest::gtest_main)
 
 # Registers each TEST() with CTest, so `ctest` can list, run and report them one by one
 include(GoogleTest)

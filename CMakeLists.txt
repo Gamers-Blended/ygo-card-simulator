@@ -29,6 +29,15 @@ set(CMAKE_CXX_STANDARD 20) # Compile with C++20
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # If compiler can't do C++20, CMake stops with an error instead of quietly using older version
 set(CMAKE_CXX_EXTENSIONS OFF) # Strict standard C++20 (-std=c++20, not gnu++20) so compiler-specific extensions don't sneak in and break MSVC builds
 
+# Compiler warnings for our own code, as a target to link PRIVATE: only targets that link it get the flags,
+# so Qt, vcpkg libraries and Qt-generated files aren't affected
+add_library(ygo_warnings INTERFACE)
+if(MSVC)
+    target_compile_options(ygo_warnings INTERFACE /W4)
+else() # GCC and Clang
+    target_compile_options(ygo_warnings INTERFACE -Wall -Wextra -Wpedantic)
+endif()
+
 # Odds engine: plain C++, deliberately declared before Qt is found so it can't depend on it
 # STATIC = compiled once into a library archive that gets copied into each program linking it
 # Headers are listed so IDEs like Qt Creator show them under target
@@ -43,10 +52,12 @@ add_library(ygo_odds STATIC
 )
 # PUBLIC: ygo_odds' own .cpp files and anything linking ygo_odds can write #include "odds/..."
 target_include_directories(ygo_odds PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# PRIVATE: warnings apply when compiling ygo_odds itself, they aren't passed on to whatever links it
+target_link_libraries(ygo_odds PRIVATE ygo_warnings)
 
 # Console demo: prints simulated pulls, no UI
 add_executable(odds_demo src/odds_demo/main.cpp)
-target_link_libraries(odds_demo PRIVATE ygo_odds)
+target_link_libraries(odds_demo PRIVATE ygo_odds ygo_warnings)
 
 # Unit tests live in tests/CMakeLists.txt
 # enable_testing() has to come first, so `ctest` run from the build folder finds them

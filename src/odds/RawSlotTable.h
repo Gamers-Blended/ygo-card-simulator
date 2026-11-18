@@ -17,7 +17,7 @@ enum class OddsKind {
 
 // One table entry exactly as written in the config, before it's turned into a probability
 struct RawRarityEntry {
-    std::string rarity;
+    std::string rarity{};
     OddsKind kind = OddsKind::Weight;
     double value = 0.0; // the weight, or N for OneInN; unused for Remainder
 };
@@ -26,7 +26,7 @@ struct RawRarityEntry {
 // Normalizing it (design doc Section 7) produces a SlotTable from PackConfig.h
 struct RawSlotTable {
     int slotIndex = 0;
-    std::vector<RawRarityEntry> entries;
+    std::vector<RawRarityEntry> entries{};
 };
 
 } // namespace ygo::odds
