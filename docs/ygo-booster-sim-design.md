@@ -146,6 +146,8 @@ Weighted tables (like the generic example above) normalize to probabilities the 
 - a "1 in N" table doesn't have exactly one remainder entry;
 - the "1 in N" probabilities add up to more than 1 (with a 1e-9 tolerance for floating-point rounding).
 
+Before that, the loader rejects the file itself (also `ConfigError`, with the location in the message, e.g. `guarantee_slots[0].table[2]: ...`) if it isn't valid JSON, if a field is missing, has the wrong type or is an empty string (counts and `slot_index` must be whole numbers), or if a table entry doesn't have exactly one of `weight`, `odds_denominator` or `"remainder": true`. Unknown fields are ignored, so later stages can add fields without breaking older files.
+
 A pack's layout is also rejected with `ConfigError` if it has no cards, if `filler_slots` plus the number of guarantee slots doesn't equal `total_cards_per_pack`, or if a guarantee `slot_index` is outside the pack or used twice. Positions not claimed by a guarantee slot are filler.
 
 **Key edge case:** seed `std::mt19937` once per session (or persist RNG state) — do not reseed per pack, or rapid "open all" clicks with a time-based seed can produce correlated results.

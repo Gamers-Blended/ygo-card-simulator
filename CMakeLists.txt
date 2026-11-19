@@ -38,11 +38,16 @@ else() # GCC and Clang
     target_compile_options(ygo_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
+# JSON parsing for per-set configs (data/*.json), installed by vcpkg (vcpkg.json)
+find_package(nlohmann_json CONFIG REQUIRED)
+
 # Odds engine: plain C++, deliberately declared before Qt is found so it can't depend on it
 # STATIC = compiled once into a library archive that gets copied into each program linking it
 # Headers are listed so IDEs like Qt Creator show them under target
 add_library(ygo_odds STATIC
     src/odds/ConfigError.h
+    src/odds/ConfigLoader.cpp
+    src/odds/ConfigLoader.h
     src/odds/Normalize.cpp
     src/odds/Normalize.h
     src/odds/PackConfig.h
@@ -54,6 +59,9 @@ add_library(ygo_odds STATIC
 target_include_directories(ygo_odds PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # PRIVATE: warnings apply when compiling ygo_odds itself, they aren't passed on to whatever links it
 target_link_libraries(ygo_odds PRIVATE ygo_warnings)
+# PRIVATE: only ConfigLoader.cpp includes the JSON header, none of ygo_odds' public headers do,
+# so programs linking ygo_odds don't get (or need) the JSON include path
+target_link_libraries(ygo_odds PRIVATE nlohmann_json::nlohmann_json)
 
 # Console demo: prints simulated pulls, no UI
 add_executable(odds_demo src/odds_demo/main.cpp)

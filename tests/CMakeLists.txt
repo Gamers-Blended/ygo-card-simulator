@@ -5,6 +5,7 @@
 find_package(GTest CONFIG REQUIRED)
 
 add_executable(odds_tests
+    odds/ConfigLoaderTests.cpp
     odds/NormalizeTests.cpp
     odds/PackOpenerTests.cpp
 )
