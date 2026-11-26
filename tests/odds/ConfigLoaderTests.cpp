@@ -36,13 +36,30 @@ constexpr std::string_view kLobJson = R"(
 }
 )";
 
+// A valid pack split around its table entries: packWithTable() puts a test's entries between the two halves
+constexpr std::string_view kPackBeforeEntries = R"(
+{
+  "set_code": "TST",
+  "total_cards_per_pack": 9,
+  "filler_slots": 8,
+  "filler_pool": "Common",
+  "guarantee_slots": [
+    {
+      "slot_index": 9,
+      "table": [
+)";
+
+constexpr std::string_view kPackAfterEntries = R"(
+      ]
+    }
+  ]
+}
+)";
+
 // A valid pack around the given table entries, so a test only spells out the part it's about
 std::string packWithTable(std::string_view tableEntries)
 {
-    return std::string(R"({ "set_code": "TST", "total_cards_per_pack": 9, "filler_slots": 8,
-                            "filler_pool": "Common",
-                            "guarantee_slots": [ { "slot_index": 9, "table": [ )")
-           + std::string(tableEntries) + "] } ] }";
+    return std::string(kPackBeforeEntries) + std::string(tableEntries) + std::string(kPackAfterEntries);
 }
 
 // Parses json, expects a ConfigError, and checks its message contains `expected`
