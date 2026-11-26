@@ -5,14 +5,12 @@
 #include <string_view>
 
 // Turns a per-set config (data/*.json, schema in design doc Section 7) into a PackConfig
-// No JSON types appear here: nlohmann/json is only used inside ConfigLoader.cpp,
-// so code that includes this header doesn't need the JSON library at all
 
 namespace ygo::odds {
 
 // Parses config text and normalizes every guarantee slot, so the result is ready to roll on
 // Each table entry gives its odds with exactly one of:
-//   "weight": number | "odds_denominator": number | "remainder": true
+//   "odds_denominator": number | "remainder": true
 //
 // Throws ConfigError if:
 // - text isn't valid JSON

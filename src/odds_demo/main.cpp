@@ -22,9 +22,6 @@ namespace {
 void printRawOdds(const odds::RawRarityEntry& entry)
 {
     switch (entry.kind) {
-    case odds::OddsKind::Weight:
-        std::cout << "weight " << entry.value;
-        break;
     case odds::OddsKind::OneInN:
         std::cout << "1 in " << entry.value;
         break;
@@ -75,19 +72,6 @@ int main()
     std::cout << "Set " << lob.setCode << ": " << lob.totalCardsPerPack << " cards per pack, "
               << lob.fillerSlots << " filler (" << lob.fillerPool << ")\n";
     printSlot(lobRawSlot);
-
-    // The generic weighted example from design doc Section 7, to exercise the Weight path
-    const odds::RawSlotTable weightedSlot{
-        .slotIndex = 9,
-        .entries = {
-            {.rarity = "Rare", .kind = odds::OddsKind::Weight, .value = 70},
-            {.rarity = "Super", .kind = odds::OddsKind::Weight, .value = 20},
-            {.rarity = "Ultra", .kind = odds::OddsKind::Weight, .value = 10},
-        },
-    };
-
-    std::cout << "\nWeighted example:\n";
-    printSlot(weightedSlot);
 
     // Roll LOB's guarantee slot many times and compare how often each rarity came up with its odds
     // One PackOpener for the whole run: it's seeded once, never per roll

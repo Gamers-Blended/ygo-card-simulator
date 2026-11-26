@@ -10,7 +10,7 @@ namespace ygo::odds {
 
 // One possible result of a slot, e.g. "Super Rare" with probability 1/6.
 // Probability is always the final chance in [0, 1]
-// Configs written as weights or "1 in N" odds are converted to this form when they're loaded
+// Configs written as "1 in N" odds plus a remainder are converted to this form when they're loaded
 // So the rest of the engine only ever deals with plain probabilities
 struct RarityEntry {
     std::string rarity{};

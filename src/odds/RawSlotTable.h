@@ -10,7 +10,6 @@ namespace ygo::odds {
 
 // How a config file writes the chance of one rarity
 enum class OddsKind {
-    Weight,    // relative weight: chance = weight / sum of all weights in the table
     OneInN,    // advertised "1 in N packs": chance = 1 / N
     Remainder, // whatever chance is left over after the OneInN entries
 };
@@ -18,8 +17,8 @@ enum class OddsKind {
 // One table entry exactly as written in the config, before it's turned into a probability
 struct RawRarityEntry {
     std::string rarity{};
-    OddsKind kind = OddsKind::Weight;
-    double value = 0.0; // the weight, or N for OneInN; unused for Remainder
+    OddsKind kind = OddsKind::OneInN;
+    double value = 0.0; // N for OneInN; unused for Remainder
 };
 
 // A guarantee slot as written in the config

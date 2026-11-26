@@ -91,9 +91,9 @@ QML views bind to C++ models/objects exposed via `qmlRegisterType` or context pr
     {
       "slot_index": 9,
       "table": [
-        { "rarity": "Rare",  "weight": 70 },
-        { "rarity": "Super", "weight": 20 },
-        { "rarity": "Ultra", "weight": 10 }
+        { "rarity": "Ultra Rare", "odds_denominator": 12 },
+        { "rarity": "Super Rare", "odds_denominator": 6 },
+        { "rarity": "Rare",       "remainder": true }
       ]
     }
   ]
@@ -139,14 +139,13 @@ Supplied odds (converted to per-slot probabilities for the guarantee slot):
 
 Do **not** model this as sequential "roll down from rarest" checks (roll 1/36 for Secret, on a miss roll 1/12 for Ultra, and so on). Each later roll only happens when the earlier ones missed, so it under-delivers every rarity after the first: Ultra comes out at (35/36)·(1/12) ≈ 8.10% (≈1:12.3) instead of 8.33%, and Super at ≈ 14.85% (≈1:6.7) instead of 16.67%.
 
-Weighted tables (like the generic example above) normalize to probabilities the same way (`weight / sum of weights`), so after loading, both config styles become the same internal probability table and use the same single-roll code path. At load time, validate each table and reject the config (throw `ConfigError`) if:
+**Only "1 in N" odds are supported** (no relative weights). Every rarity printed on a pack is advertised as "1 in N", and the remainder entry covers the one rarity with no printed odds, so weights were removed in Stage 1 as unused. At load time, validate each table and reject the config (throw `ConfigError`) if:
 - it has no entries, or an entry has no rarity name;
-- a weight isn't > 0, or a "1 in N" has N < 1;
-- it mixes weights with "1 in N" / remainder entries;
-- a "1 in N" table doesn't have exactly one remainder entry;
+- a "1 in N" has N < 1;
+- it doesn't have exactly one remainder entry;
 - the "1 in N" probabilities add up to more than 1 (with a 1e-9 tolerance for floating-point rounding).
 
-Before that, the loader rejects the file itself (also `ConfigError`, with the location in the message, e.g. `guarantee_slots[0].table[2]: ...`) if it isn't valid JSON, if a field is missing, has the wrong type or is an empty string (counts and `slot_index` must be whole numbers), or if a table entry doesn't have exactly one of `weight`, `odds_denominator` or `"remainder": true`. Unknown fields are ignored, so later stages can add fields without breaking older files.
+Before that, the loader rejects the file itself (also `ConfigError`, with the location in the message, e.g. `guarantee_slots[0].table[2]: ...`) if it isn't valid JSON, if a field is missing, has the wrong type or is an empty string (counts and `slot_index` must be whole numbers), or if a table entry doesn't have exactly one of `odds_denominator` or `"remainder": true`. Unknown fields are ignored, so later stages can add fields without breaking older files.
 
 A pack's layout is also rejected with `ConfigError` if it has no cards, if `filler_slots` plus the number of guarantee slots doesn't equal `total_cards_per_pack`, or if a guarantee `slot_index` is outside the pack or used twice. Positions not claimed by a guarantee slot are filler.
 
@@ -214,7 +213,7 @@ Written as incremental, independently-committable stages — each stage should e
 - [x] Dependency management mode — vcpkg manifest mode confirmed.
 - [x] First per-set odds table — LOB provided (Section 7); validates the "1 in N + remainder" schema pattern for future sets.
 - [x] Save file location convention — OS-standard paths confirmed (Section 8).
-- [ ] Additional set odds tables to be supplied incrementally as they're provided — each new set should reuse the LOB schema pattern (weighted table *or* "1 in N" odds with a remainder entry, whichever matches the source odds; both resolve to one probability table and a single roll).
+- [ ] Additional set odds tables to be supplied incrementally as they're provided — each new set should reuse the LOB schema pattern ("1 in N" odds with one remainder entry, resolved to one probability table and a single roll).
 - [x] `.gitignore` excludes the local SQLite catalog cache (`*.db`) in addition to `*.sav` — it's regenerable via Sync Service and shouldn't be committed.
 
 ---

@@ -15,11 +15,6 @@ namespace odds = ygo::odds;
 namespace {
 
 // Short builders, so each test shows only the entries it's about
-odds::RawRarityEntry weight(const std::string& rarity, double value)
-{
-    return {.rarity = rarity, .kind = odds::OddsKind::Weight, .value = value};
-}
-
 odds::RawRarityEntry oneIn(const std::string& rarity, double n)
 {
     return {.rarity = rarity, .kind = odds::OddsKind::OneInN, .value = n};
@@ -78,25 +73,6 @@ TEST(Normalize, LobOneInNOddsBecomeProbabilities)
     EXPECT_NEAR(slot.entries[3].probability, 26.0 / 36, kTolerance);
 }
 
-TEST(Normalize, WeightsAreDividedByTheirSum)
-{
-    const odds::RawSlotTable raw{
-        .slotIndex = 9,
-        .entries = {
-            {.rarity = "Rare", .kind = odds::OddsKind::Weight, .value = 70},
-            {.rarity = "Super", .kind = odds::OddsKind::Weight, .value = 20},
-            {.rarity = "Ultra", .kind = odds::OddsKind::Weight, .value = 10},
-        },
-    };
-
-    const odds::SlotTable slot = odds::normalize(raw);
-
-    ASSERT_EQ(slot.entries.size(), 3u);
-    EXPECT_NEAR(slot.entries[0].probability, 0.7, kTolerance);
-    EXPECT_NEAR(slot.entries[1].probability, 0.2, kTolerance);
-    EXPECT_NEAR(slot.entries[2].probability, 0.1, kTolerance);
-}
-
 TEST(Normalize, ProbabilitiesAddUpToOne)
 {
     const odds::SlotTable slot = odds::normalize(lobRawSlot());
@@ -145,32 +121,14 @@ TEST(Normalize, RejectsEntryWithoutRarity)
     EXPECT_THROW(odds::normalize(tableOf({remainder("")})), odds::ConfigError);
 }
 
-TEST(Normalize, RejectsWeightThatIsNotPositive)
-{
-    for (const double bad : {0.0, -1.0, kNaN, kInfinity}) {
-        // SCOPED_TRACE adds the value to any failure message, so you can tell which one failed
-        SCOPED_TRACE(bad);
-        EXPECT_THROW(odds::normalize(tableOf({weight("Rare", bad)})), odds::ConfigError);
-    }
-}
-
 TEST(Normalize, RejectsOneInNBelowOne)
 {
     for (const double bad : {0.0, 0.5, -6.0, kNaN, kInfinity}) {
+        // SCOPED_TRACE adds the value to any failure message, so you can tell which one failed
         SCOPED_TRACE(bad);
         EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", bad), remainder("Rare")})),
                      odds::ConfigError);
     }
-}
-
-TEST(Normalize, RejectsWeightsMixedWithOneInN)
-{
-    EXPECT_THROW(odds::normalize(tableOf({oneIn("Super Rare", 6), weight("Rare", 70)})), odds::ConfigError);
-}
-
-TEST(Normalize, RejectsWeightsMixedWithRemainder)
-{
-    EXPECT_THROW(odds::normalize(tableOf({weight("Super Rare", 30), remainder("Rare")})), odds::ConfigError);
 }
 
 TEST(Normalize, RejectsOneInNWithoutRemainder)

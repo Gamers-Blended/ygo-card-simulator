@@ -29,12 +29,9 @@ SlotTable normalize(const RawSlotTable& raw)
         throw slotError(raw, "table has no entries");
     }
 
-    // Pass 1: check each entry, and get sum/total of each kind, because a Weight or Remainder
-    // entry's chance depends on whole table
-    double weightSum = 0.0;
+    // Pass 1: check each entry, and add up the 1-in-N chances, because the Remainder entry's
+    // chance depends on the whole table
     double oneInNSum = 0.0;
-    int weightCount = 0;
-    int oneInNCount = 0;
     int remainderCount = 0;
 
     for (const auto& entry : raw.entries) {
@@ -43,23 +40,14 @@ SlotTable normalize(const RawSlotTable& raw)
         }
 
         switch (entry.kind) {
-        case OddsKind::Weight:
-            // isfinite rejects NaN and infinity, which would poison the sum
-            if (!std::isfinite(entry.value) || entry.value <= 0.0) {
-                throw slotError(raw, std::format("{}: weight must be > 0 (got {})", entry.rarity,
-                                                 entry.value));
-            }
-            weightSum += entry.value;
-            ++weightCount;
-            break;
         case OddsKind::OneInN:
             // N < 1 would mean a chance above 100%
+            // isfinite rejects NaN and infinity, which would poison the sum
             if (!std::isfinite(entry.value) || entry.value < 1.0) {
                 throw slotError(raw, std::format("{}: 1 in N needs N >= 1 (got {})", entry.rarity,
                                                  entry.value));
             }
             oneInNSum += 1.0 / entry.value;
-            ++oneInNCount;
             break;
         case OddsKind::Remainder:
             ++remainderCount;
@@ -68,13 +56,9 @@ SlotTable normalize(const RawSlotTable& raw)
     }
 
     // Table-wide rules, now that every entry has been seen
-    if (weightCount > 0 && (oneInNCount > 0 || remainderCount > 0)) {
-        throw slotError(raw, "can't mix weights with 1-in-N or remainder entries");
-    }
-    // Without exactly one remainder, a 1-in-N table's chances wouldn't add up to 1
-    if (weightCount == 0 && remainderCount != 1) {
-        throw slotError(raw, std::format("a 1-in-N table needs exactly one remainder entry (got {})",
-                                         remainderCount));
+    // Without exactly one remainder, the table's chances wouldn't add up to 1
+    if (remainderCount != 1) {
+        throw slotError(raw, std::format("table needs exactly one remainder entry (got {})", remainderCount));
     }
     if (oneInNSum > 1.0 + kSumTolerance) {
         throw slotError(raw, std::format("1-in-N odds add up to {}, more than 1", oneInNSum));
@@ -87,9 +71,6 @@ SlotTable normalize(const RawSlotTable& raw)
     for (const auto& entry : raw.entries) {
         double probability = 0.0;
         switch (entry.kind) {
-        case OddsKind::Weight:
-            probability = entry.value / weightSum;
-            break;
         case OddsKind::OneInN:
             probability = 1.0 / entry.value;
             break;

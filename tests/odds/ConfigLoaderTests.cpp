@@ -80,20 +80,6 @@ TEST(ConfigLoader, ParsesLobConfig)
     EXPECT_NEAR(slot.entries[3].probability, 26.0 / 36, kTolerance);
 }
 
-TEST(ConfigLoader, ParsesWeightedTable)
-{
-    const odds::PackConfig config = odds::parsePackConfig(packWithTable(R"(
-        { "rarity": "Rare", "weight": 70 }, { "rarity": "Super", "weight": 20.5 },
-        { "rarity": "Ultra", "weight": 9.5 } )"));
-
-    ASSERT_EQ(config.guaranteeSlots.size(), 1u);
-    const odds::SlotTable& slot = config.guaranteeSlots[0];
-    ASSERT_EQ(slot.entries.size(), 3u);
-    EXPECT_NEAR(slot.entries[0].probability, 0.70, kTolerance);
-    EXPECT_NEAR(slot.entries[1].probability, 0.205, kTolerance);
-    EXPECT_NEAR(slot.entries[2].probability, 0.095, kTolerance);
-}
-
 TEST(ConfigLoader, RejectsInvalidJson)
 {
     expectErrorContaining(R"({ "set_code": "LOB", )", "not valid JSON");
@@ -120,8 +106,8 @@ TEST(ConfigLoader, RejectsWrongFieldTypes)
     expectErrorContaining(R"({ "set_code": "LOB", "total_cards_per_pack": 9, "filler_slots": 8,
                                "filler_pool": "Common", "guarantee_slots": {} })",
                           "\"guarantee_slots\" must be an array");
-    expectErrorContaining(packWithTable(R"({ "rarity": "Rare", "weight": "70" })"),
-                          "\"weight\" must be a number");
+    expectErrorContaining(packWithTable(R"({ "rarity": "Super Rare", "odds_denominator": "6" })"),
+                          "\"odds_denominator\" must be a number");
 }
 
 TEST(ConfigLoader, RejectsEmptyString)
@@ -134,9 +120,15 @@ TEST(ConfigLoader, RejectsEntryWithoutOddsKey)
     expectErrorContaining(packWithTable(R"({ "rarity": "Rare" })"), "needs exactly one of");
 }
 
+TEST(ConfigLoader, RejectsWeightKey)
+{
+    // Weights aren't supported: "weight" is just an unknown key, so the entry has no odds at all
+    expectErrorContaining(packWithTable(R"({ "rarity": "Rare", "weight": 70 })"), "(got 0)");
+}
+
 TEST(ConfigLoader, RejectsEntryWithSeveralOddsKeys)
 {
-    expectErrorContaining(packWithTable(R"({ "rarity": "Rare", "weight": 1, "odds_denominator": 6 })"),
+    expectErrorContaining(packWithTable(R"({ "rarity": "Rare", "odds_denominator": 6, "remainder": true })"),
                           "(got 2)");
 }
 
@@ -150,7 +142,7 @@ TEST(ConfigLoader, RejectsRemainderFalse)
 TEST(ConfigLoader, ErrorNamesTheTableEntry)
 {
     // Second entry (index 1) of the first slot is the bad one
-    expectErrorContaining(packWithTable(R"({ "rarity": "Rare", "weight": 70 }, { "weight": 30 })"),
+    expectErrorContaining(packWithTable(R"({ "rarity": "Rare", "remainder": true }, { "odds_denominator": 6 })"),
                           "guarantee_slots[0].table[1]: missing field \"rarity\"");
 }
 

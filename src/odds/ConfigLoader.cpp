@@ -14,7 +14,7 @@ namespace ygo::odds {
 
 namespace {
 
-using nlohmann::json;
+using json = nlohmann::json;
 
 // Every helper takes `where`, the path to the JSON value being read (e.g. "guarantee_slots[0]"),
 // so an error message says where in the file the problem is
@@ -60,7 +60,7 @@ int getInt(const json& object, std::string_view key, std::string_view where)
     return value.get<int>();
 }
 
-// Any JSON number, whole or not (weights like 2.5 are fine)
+// Any JSON number, whole or not ("1 in 2.5" is fine)
 double getNumber(const json& object, std::string_view key, std::string_view where)
 {
     const json& value = requireField(object, key, where);
@@ -97,22 +97,18 @@ RawRarityEntry parseEntry(const json& entry, std::string_view where)
 
     // Exactly one odds key, otherwise it's unclear which one was meant
     int oddsKeyCount = 0;
-    for (const char* key : {"weight", "odds_denominator", "remainder"}) {
+    for (const std::string_view key : {"odds_denominator", "remainder"}) {
         if (entry.contains(key)) {
             ++oddsKeyCount;
         }
     }
     if (oddsKeyCount != 1) {
-        throw ConfigError(std::format(
-            "{}: needs exactly one of \"weight\", \"odds_denominator\" or \"remainder\" (got {})", where,
-            oddsKeyCount));
+        throw ConfigError(std::format("{}: needs exactly one of \"odds_denominator\" or \"remainder\" (got {})",
+                                      where, oddsKeyCount));
     }
 
-    // Range checks (weight > 0, N >= 1) are left to normalize(), so each rule lives in one place
-    if (entry.contains("weight")) {
-        raw.kind = OddsKind::Weight;
-        raw.value = getNumber(entry, "weight", where);
-    } else if (entry.contains("odds_denominator")) {
+    // Range check (N >= 1) is left to normalize(), so each rule lives in one place
+    if (entry.contains("odds_denominator")) {
         raw.kind = OddsKind::OneInN;
         raw.value = getNumber(entry, "odds_denominator", where);
     } else {
