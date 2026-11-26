@@ -147,6 +147,20 @@ Do **not** model this as sequential "roll down from rarest" checks (roll 1/36 fo
 
 Before that, the loader rejects the file itself (also `ConfigError`, with the location in the message, e.g. `guarantee_slots[0].table[2]: ...`) if it isn't valid JSON, if a field is missing, has the wrong type or is an empty string (counts and `slot_index` must be whole numbers), or if a table entry doesn't have exactly one of `odds_denominator` or `"remainder": true`. Unknown fields are ignored, so later stages can add fields without breaking older files.
 
+**Why each guarantee slot has a `slot_index`.** `filler_slots` says how many filler cards a pack has and a slot's `table` says what it can roll, but only `slot_index` says *where* in the pack that card goes (1-based). Opening a pack starts with every position as filler, then overwrites each guarantee slot's position with its rolled rarity:
+
+```
+start:   [C][C][C][C][C][C][C][C][C]   9 filler Commons
+slot 9:  [C][C][C][C][C][C][C][C][R]   position 9 overwritten with the rolled rarity
+```
+
+Writing the position in the file, rather than relying on a hidden rule like "guarantee slots go last", matters because:
+- **Reveal order:** cards flip one at a time (Section 9). In a real LOB pack the rare is the last card, and `"slot_index": 9` keeps that big reveal at the end.
+- **Several guarantee slots:** later sets may have, say, a rare slot *and* a separate foil slot. Each gets its own table and position, and mistakes (a position outside the pack, two slots claiming the same position) can be caught at load time.
+- **Data, not code:** a set that puts its rare somewhere else is a one-number change in its JSON, not a code change.
+
+(The alternative, "guarantee slots fill the last positions in listed order", would save one line per slot but hide the layout in code. It was rejected in Stage 1.)
+
 A pack's layout is also rejected with `ConfigError` if it has no cards, if `filler_slots` plus the number of guarantee slots doesn't equal `total_cards_per_pack`, or if a guarantee `slot_index` is outside the pack or used twice. Positions not claimed by a guarantee slot are filler.
 
 **Key edge case:** seed `std::mt19937` once per session (or persist RNG state) — do not reseed per pack, or rapid "open all" clicks with a time-based seed can produce correlated results.

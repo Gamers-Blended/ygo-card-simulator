@@ -148,18 +148,18 @@ PackConfig parsePackConfig(std::string_view jsonText)
         throw ConfigError(std::format("not valid JSON: {}", error.what()));
     }
 
-    constexpr std::string_view kTop = "pack config";
-    requireObject(root, kTop);
+    constexpr std::string_view kRoot = "pack config";
+    requireObject(root, kRoot);
 
     // Members of a braced initializer are evaluated in order, so the first bad field is the one reported
     PackConfig config{
-        .setCode = getString(root, "set_code", kTop),
-        .totalCardsPerPack = getInt(root, "total_cards_per_pack", kTop),
-        .fillerSlots = getInt(root, "filler_slots", kTop),
-        .fillerPool = getString(root, "filler_pool", kTop),
+        .setCode = getString(root, "set_code", kRoot),
+        .totalCardsPerPack = getInt(root, "total_cards_per_pack", kRoot),
+        .fillerSlots = getInt(root, "filler_slots", kRoot),
+        .fillerPool = getString(root, "filler_pool", kRoot),
     };
 
-    const json& slots = getArray(root, "guarantee_slots", kTop);
+    const json& slots = getArray(root, "guarantee_slots", kRoot);
     config.guaranteeSlots.reserve(slots.size());
     for (std::size_t i = 0; i < slots.size(); ++i) {
         // Parse to the raw form first, then normalize, the same path a hand-built table takes

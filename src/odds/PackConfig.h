@@ -18,6 +18,9 @@ struct RarityEntry {
 };
 
 // A pack slot that rolls on its own rarity table instead of drawing from filler pool
+// slotIndex says where in the pack the rolled card goes, e.g. LOB's rare is card 9, the last one revealed
+// Written in the config instead of a hidden "guarantee slots go last" rule, so reveal order and
+// sets with several guarantee slots stay data, not code (design doc Section 7)
 struct SlotTable {
     int slotIndex = 0; // 1-based position in the pack, same as "slot_index" in the JSON
     std::vector<RarityEntry> entries{};

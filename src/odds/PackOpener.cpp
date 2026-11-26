@@ -79,6 +79,7 @@ std::vector<std::string> PackOpener::openPack(const PackConfig& config)
     std::vector<std::string> pack(config.totalCardsPerPack, config.fillerPool);
 
     // Then overwrite the guarantee positions; slotIndex is 1-based, vector positions are 0-based
+    // LOB: [C][C][C][C][C][C][C][C][C] -> slot 9 rolls -> [C][C][C][C][C][C][C][C][R]
     for (const auto& slot : config.guaranteeSlots) {
         pack[slot.slotIndex - 1] = rollSlot(slot);
     }

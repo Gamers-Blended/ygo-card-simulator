@@ -24,7 +24,7 @@ struct RawRarityEntry {
 // A guarantee slot as written in the config
 // Normalizing it (design doc Section 7) produces a SlotTable from PackConfig.h
 struct RawSlotTable {
-    int slotIndex = 0;
+    int slotIndex = 0; // 1-based position in the pack, copied as-is into SlotTable (see PackConfig.h)
     std::vector<RawRarityEntry> entries{};
 };
 
