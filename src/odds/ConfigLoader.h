@@ -2,6 +2,7 @@
 
 #include "odds/PackConfig.h"
 
+#include <filesystem>
 #include <string_view>
 
 // Turns a per-set config (data/*.json, schema in design doc Section 7) into a PackConfig
@@ -19,5 +20,10 @@ namespace ygo::odds {
 // - a table breaks a normalize() rule (see Normalize.h)
 // Messages name the place in the file, e.g. "guarantee_slots[0].table[2]: ..."
 PackConfig parsePackConfig(std::string_view jsonText);
+
+// Reads a config file and parses it with parsePackConfig()
+// Throws ConfigError if the file can't be opened, or for any parsePackConfig() error;
+// either way the message starts with the file's path, e.g. "data/LOB.json: missing field ..."
+PackConfig loadPackConfig(const std::filesystem::path& path);
 
 } // namespace ygo::odds

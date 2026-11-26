@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <string_view>
 
@@ -72,6 +74,25 @@ void expectErrorContaining(const std::string& json, std::string_view expected)
         const std::string message = error.what();
         EXPECT_NE(message.find(expected), std::string::npos) << message;
     }
+}
+
+// The repo's data/ folder; YGO_DATA_DIR comes from tests/CMakeLists.txt
+// The / operator joins paths with the right separator for the platform
+std::filesystem::path dataFile(std::string_view fileName)
+{
+    return std::filesystem::path(YGO_DATA_DIR) / fileName;
+}
+
+// Loads a file and returns the ConfigError message, or "" if it loaded fine
+// Returning the message (instead of checking inside) lets a test clean up before its EXPECTs
+std::string loadErrorMessage(const std::filesystem::path& path)
+{
+    try {
+        odds::loadPackConfig(path);
+    } catch (const odds::ConfigError& error) {
+        return error.what();
+    }
+    return {};
 }
 
 } // namespace
@@ -171,4 +192,52 @@ TEST(ConfigLoader, NormalizeRulesStillApply)
                                            { "rarity": "C", "odds_denominator": 2 },
                                            { "rarity": "Rare", "remainder": true })"),
                           "more than 1");
+}
+
+// --- Loading from a file ---
+
+TEST(ConfigLoader, LoadsLobFile)
+{
+    const odds::PackConfig config = odds::loadPackConfig(dataFile("LOB.json"));
+
+    EXPECT_EQ(config.setCode, "LOB");
+    EXPECT_EQ(config.totalCardsPerPack, 9);
+    EXPECT_EQ(config.fillerSlots, 8);
+    EXPECT_EQ(config.fillerPool, "Common");
+    ASSERT_EQ(config.guaranteeSlots.size(), 1u);
+
+    const odds::SlotTable& slot = config.guaranteeSlots[0];
+    EXPECT_EQ(slot.slotIndex, 9);
+    ASSERT_EQ(slot.entries.size(), 4u);
+    EXPECT_NEAR(slot.entries[0].probability, 1.0 / 36, kTolerance);
+    EXPECT_NEAR(slot.entries[1].probability, 1.0 / 12, kTolerance);
+    EXPECT_NEAR(slot.entries[2].probability, 1.0 / 6, kTolerance);
+    EXPECT_NEAR(slot.entries[3].probability, 26.0 / 36, kTolerance);
+}
+
+TEST(ConfigLoader, RejectsMissingFile)
+{
+    const std::filesystem::path path = dataFile("NO_SUCH_SET.json");
+
+    const std::string message = loadErrorMessage(path);
+
+    EXPECT_NE(message.find(path.string()), std::string::npos) << message;
+    EXPECT_NE(message.find("can't open file"), std::string::npos) << message;
+}
+
+TEST(ConfigLoader, FileErrorNamesTheFile)
+{
+    // A bad config written to the system's temp folder, so the repo's data/ stays untouched
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / "ygo_config_loader_test.json";
+    {
+        // Braces end `out`'s scope here, so its destructor flushes and closes the file before it's loaded
+        std::ofstream out(path);
+        out << R"({ "set_code": "BAD" })";
+    }
+
+    const std::string message = loadErrorMessage(path);
+    std::filesystem::remove(path); // before the EXPECTs, so the file is cleaned up even if they fail
+
+    EXPECT_NE(message.find(path.string()), std::string::npos) << message;
+    EXPECT_NE(message.find("missing field \"total_cards_per_pack\""), std::string::npos) << message;
 }

@@ -1,0 +1,17 @@
+{
+  "set_code": "LOB",
+  "total_cards_per_pack": 9,
+  "filler_slots": 8,
+  "filler_pool": "Common",
+  "guarantee_slots": [
+    {
+      "slot_index": 9,
+      "table": [
+        { "rarity": "Secret Rare", "odds_denominator": 36 },
+        { "rarity": "Ultra Rare",  "odds_denominator": 12 },
+        { "rarity": "Super Rare",  "odds_denominator": 6 },
+        { "rarity": "Rare",        "remainder": true }
+      ]
+    }
+  ]
+}

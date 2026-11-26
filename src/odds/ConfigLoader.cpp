@@ -8,6 +8,8 @@
 
 #include <cstddef>
 #include <format>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 namespace ygo::odds {
@@ -167,6 +169,30 @@ PackConfig parsePackConfig(std::string_view jsonText)
         config.guaranteeSlots.push_back(normalize(raw));
     }
     return config;
+}
+
+PackConfig loadPackConfig(const std::filesystem::path& path)
+{
+    // path.string() because std::format can't print a std::filesystem::path directly until C++26
+    const std::string fileName = path.string();
+
+    // RAII: the constructor opens the file, and the destructor closes it when `file` goes out of scope,
+    // on every way out of this function (normal return or exception), so there's no close() to forget
+    std::ifstream file(path);
+    if (!file) {
+        throw ConfigError(std::format("{}: can't open file", fileName));
+    }
+
+    // rdbuf() is the stream's underlying buffer; << copies all of it into the string stream in one go
+    std::ostringstream text;
+    text << file.rdbuf();
+
+    try {
+        return parsePackConfig(text.str());
+    } catch (const ConfigError& error) {
+        // Same error, with the file name in front, so you know which file to fix when several are loaded
+        throw ConfigError(std::format("{}: {}", fileName, error.what()));
+    }
 }
 
 } // namespace ygo::odds
