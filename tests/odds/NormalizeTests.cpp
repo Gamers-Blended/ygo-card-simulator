@@ -154,8 +154,8 @@ TEST(Normalize, ErrorMessageNamesTheSlotAndRarity)
         odds::normalize(tableOf({oneIn("Super Rare", 0), remainder("Rare")}));
         FAIL() << "expected ConfigError";
     } catch (const odds::ConfigError& error) {
-        const std::string message = error.what();
-        EXPECT_NE(message.find("slot 9"), std::string::npos) << message;
-        EXPECT_NE(message.find("Super Rare"), std::string::npos) << message;
+        const std::string errorMessage = error.what();
+        EXPECT_NE(errorMessage.find("slot 9"), std::string::npos) << errorMessage;
+        EXPECT_NE(errorMessage.find("Super Rare"), std::string::npos) << errorMessage;
     }
 }

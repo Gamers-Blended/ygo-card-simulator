@@ -71,8 +71,8 @@ void expectErrorContaining(const std::string& json, std::string_view expected)
         odds::parsePackConfig(json);
         FAIL() << "expected ConfigError for: " << json;
     } catch (const odds::ConfigError& error) {
-        const std::string message = error.what();
-        EXPECT_NE(message.find(expected), std::string::npos) << message;
+        const std::string errorMessage = error.what();
+        EXPECT_NE(errorMessage.find(expected), std::string::npos) << errorMessage;
     }
 }
 
@@ -85,7 +85,7 @@ std::filesystem::path dataFile(std::string_view fileName)
 
 // Loads a file and returns the ConfigError message, or "" if it loaded fine
 // Returning the message (instead of checking inside) lets a test clean up before its EXPECTs
-std::string loadErrorMessage(const std::filesystem::path& path)
+std::string loadPackConfigError(const std::filesystem::path& path)
 {
     try {
         odds::loadPackConfig(path);
@@ -219,10 +219,10 @@ TEST(ConfigLoader, RejectsMissingFile)
 {
     const std::filesystem::path path = dataFile("NO_SUCH_SET.json");
 
-    const std::string message = loadErrorMessage(path);
+    const std::string errorMessage = loadPackConfigError(path);
 
-    EXPECT_NE(message.find(path.string()), std::string::npos) << message;
-    EXPECT_NE(message.find("can't open file"), std::string::npos) << message;
+    EXPECT_NE(errorMessage.find(path.string()), std::string::npos) << errorMessage;
+    EXPECT_NE(errorMessage.find("can't open file"), std::string::npos) << errorMessage;
 }
 
 TEST(ConfigLoader, FileErrorNamesTheFile)
@@ -235,9 +235,9 @@ TEST(ConfigLoader, FileErrorNamesTheFile)
         out << R"({ "set_code": "BAD" })";
     }
 
-    const std::string message = loadErrorMessage(path);
+    const std::string errorMessage = loadPackConfigError(path);
     std::filesystem::remove(path); // before the EXPECTs, so the file is cleaned up even if they fail
 
-    EXPECT_NE(message.find(path.string()), std::string::npos) << message;
-    EXPECT_NE(message.find("missing field \"total_cards_per_pack\""), std::string::npos) << message;
+    EXPECT_NE(errorMessage.find(path.string()), std::string::npos) << errorMessage;
+    EXPECT_NE(errorMessage.find("missing field \"total_cards_per_pack\""), std::string::npos) << errorMessage;
 }
