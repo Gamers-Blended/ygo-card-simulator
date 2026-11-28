@@ -1,12 +1,17 @@
 // Console demo for odds engine
 // No Qt, no UI: just prints what engine sees
-// For now it builds LOB config by hand; later it will load data/LOB.json and open packs
+// Loads a set's config from path given on the command line
+// e.g.
+// ./build/cli/odds_demo data/LOB.json
 
-#include "odds/Normalize.h"
+#include "odds/ConfigError.h"
+#include "odds/ConfigLoader.h"
 #include "odds/PackConfig.h"
 #include "odds/PackOpener.h"
-#include "odds/RawSlotTable.h"
 
+#include <cstdlib>
+#include <filesystem>
+#include <format>
 #include <iostream>
 #include <map>
 #include <string>
@@ -17,87 +22,55 @@ namespace odds = ygo::odds;
 
 namespace {
 
-// Prints how an entry's odds were written in config, e.g. "1 in 36"
-// Function reads caller's object instead of copying its string
-void printRawOdds(const odds::RawRarityEntry& entry)
+// Prints a slot's probabilities, plus each as "1 in N" so it can be checked against printed odds
+void printSlot(const odds::SlotTable& slot)
 {
-    switch (entry.kind) {
-    case odds::OddsKind::OneInN:
-        std::cout << "1 in " << entry.value;
-        break;
-    case odds::OddsKind::Remainder:
-        std::cout << "remainder";
-        break;
+    std::cout << "  Slot " << slot.slotIndex << ":\n";
+    for (const auto& entry : slot.entries) {
+        std::cout << std::format("    {}: {:.2f}%", entry.rarity, entry.probability * 100);
+        // A remainder can come out as exactly 0; 1 / 0 would print "inf"
+        if (entry.probability > 0.0) {
+            std::cout << std::format(" (1 in {:.2f})", 1.0 / entry.probability);
+        }
+        std::cout << '\n';
     }
 }
 
-// Prints a raw slot next to its normalized probabilities, one line per entry
-void printSlot(const odds::RawSlotTable& raw)
+// Everything the demo shows for one loaded set
+void runDemo(const odds::PackConfig& config)
 {
-    const odds::SlotTable normalized = odds::normalize(raw);
-
-    std::cout << "  Slot " << raw.slotIndex << ":\n";
-    // Same order in both tables, so entry i of one matches entry i of the other
-    for (std::size_t i = 0; i < raw.entries.size(); ++i) {
-        std::cout << "    " << raw.entries[i].rarity << ": ";
-        printRawOdds(raw.entries[i]);
-        std::cout << " -> " << normalized.entries[i].probability * 100 << "%\n";
+    std::cout << "Set " << config.setCode << ": " << config.totalCardsPerPack << " cards per pack, "
+              << config.fillerSlots << " filler (" << config.fillerPool << ")\n";
+    for (const auto& slot : config.guaranteeSlots) {
+        printSlot(slot);
     }
-}
 
-} // namespace
-
-int main()
-{
-    // LOB's guarantee slot as the config file writes it (design doc Section 7)
-    // Designated initializers (C++20): each field is named, so this reads like the JSON
-    const odds::RawSlotTable lobRawSlot{
-        .slotIndex = 9,
-        .entries = {
-            {.rarity = "Secret Rare", .kind = odds::OddsKind::OneInN, .value = 36},
-            {.rarity = "Ultra Rare", .kind = odds::OddsKind::OneInN, .value = 12},
-            {.rarity = "Super Rare", .kind = odds::OddsKind::OneInN, .value = 6},
-            {.rarity = "Rare", .kind = odds::OddsKind::Remainder},
-        },
-    };
-
-    const odds::PackConfig lob{
-        .setCode = "LOB",
-        .totalCardsPerPack = 9,
-        .fillerSlots = 8,
-        .fillerPool = "Common",
-        .guaranteeSlots = {odds::normalize(lobRawSlot)},
-    };
-
-    std::cout << "Set " << lob.setCode << ": " << lob.totalCardsPerPack << " cards per pack, "
-              << lob.fillerSlots << " filler (" << lob.fillerPool << ")\n";
-    printSlot(lobRawSlot);
-
-    // Roll LOB's guarantee slot many times and compare how often each rarity came up with its odds
+    // Roll each guarantee slot many times and compare how often each rarity came up with its odds
     // One PackOpener for the whole run: it's seeded once, never per roll
     odds::PackOpener opener;
-    const odds::SlotTable& lobSlot = lob.guaranteeSlots.front(); // Avoid making a copy
     constexpr int kRolls = 36000;
 
-    std::map<std::string, int> counts; // rarity -> how many times it was rolled
-    for (int i = 0; i < kRolls; ++i) {
-        ++counts[opener.rollSlot(lobSlot)];
-    }
+    for (const auto& slot : config.guaranteeSlots) {
+        std::map<std::string, int> counts; // rarity -> how many times it was rolled
+        for (int i = 0; i < kRolls; ++i) {
+            ++counts[opener.rollSlot(slot)];
+        }
 
-    std::cout << "\nRolled LOB slot " << lobSlot.slotIndex << " " << kRolls << " times:\n";
-    for (const auto& entry : lobSlot.entries) {
-        const int count = counts[entry.rarity];
-        const double observed = 100.0 * count / kRolls;
-        std::cout << "    " << entry.rarity << ": " << count << " (" << observed << "%, expected "
-                  << entry.probability * 100 << "%)\n";
+        std::cout << "\nRolled slot " << slot.slotIndex << " " << kRolls << " times:\n";
+        for (const auto& entry : slot.entries) {
+            const int count = counts[entry.rarity];
+            const double observed = 100.0 * count / kRolls;
+            std::cout << std::format("    {}: {} ({:.2f}%, expected {:.2f}%)\n", entry.rarity, count, observed,
+                                     entry.probability * 100);
+        }
     }
 
     // Open whole packs with the same opener, so the RNG carries on from the rolls above
     constexpr int kPacks = 5;
 
-    std::cout << "\nOpening " << kPacks << " LOB packs:\n";
+    std::cout << "\nOpening " << kPacks << " " << config.setCode << " packs:\n";
     for (int i = 1; i <= kPacks; ++i) {
-        const std::vector<std::string> pack = opener.openPack(lob);
+        const std::vector<std::string> pack = opener.openPack(config);
 
         std::cout << "  Pack " << i << ":";
         for (const auto& rarity : pack) {
@@ -105,6 +78,31 @@ int main()
         }
         std::cout << '\n';
     }
+}
 
-    return 0;
+} // namespace
+
+// argc = how many command-line words there are, counting the program's own name
+// argv = those words as C strings: argv[0] is the program, argv[1] the first argument, ...
+int main(int argc, char* argv[])
+{
+    if (argc != 2) {
+        // argv[0] can be missing (argc == 0) if the program was started in an unusual way
+        const char* programName = argc > 0 ? argv[0] : "odds_demo";
+        // Errors go to std::cerr, not std::cout, so they still show if normal output is redirected to a file
+        std::cerr << "Usage: " << programName << " <set config, e.g. data/LOB.json>\n";
+        return EXIT_FAILURE;
+    }
+
+    const std::filesystem::path configPath = argv[1];
+
+    // A bad config is the user's mistake, not a bug: report it and exit cleanly instead of crashing
+    try {
+        runDemo(odds::loadPackConfig(configPath));
+    } catch (const odds::ConfigError& error) {
+        std::cerr << "Error: " << error.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
 }
