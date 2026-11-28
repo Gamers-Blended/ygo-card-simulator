@@ -51,6 +51,8 @@ add_library(ygo_odds STATIC
     src/odds/Normalize.cpp
     src/odds/Normalize.h
     src/odds/PackConfig.h
+    src/odds/PackLayout.cpp
+    src/odds/PackLayout.h
     src/odds/PackOpener.cpp
     src/odds/PackOpener.h
     src/odds/RawSlotTable.h

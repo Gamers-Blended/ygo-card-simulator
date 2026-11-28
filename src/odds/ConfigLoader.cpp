@@ -2,6 +2,7 @@
 
 #include "odds/ConfigError.h"
 #include "odds/Normalize.h"
+#include "odds/PackLayout.h"
 #include "odds/RawSlotTable.h"
 
 #include <nlohmann/json.hpp>
@@ -168,6 +169,10 @@ PackConfig parsePackConfig(std::string_view jsonText)
         const RawSlotTable raw = parseSlot(slots[i], std::format("guarantee_slots[{}]", i));
         config.guaranteeSlots.push_back(normalize(raw));
     }
+
+    // Every field is valid on its own; now check that they fit together as a pack,
+    // so a bad file fails here instead of on the first openPack()
+    validatePackLayout(config);
     return config;
 }
 

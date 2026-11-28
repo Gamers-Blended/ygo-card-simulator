@@ -1,42 +1,10 @@
 #include "odds/PackOpener.h"
 
-#include "odds/ConfigError.h"
+#include "odds/PackLayout.h"
 
-#include <format>
 #include <stdexcept>
 
 namespace ygo::odds {
-
-namespace {
-
-// Checks that slots fit pack, so openPack can safely index by slotIndex
-void checkPackLayout(const PackConfig& config)
-{
-    const int total = config.totalCardsPerPack;
-    if (total <= 0) {
-        throw ConfigError(std::format("{}: pack needs at least 1 card (got {})", config.setCode, total));
-    }
-
-    const int guaranteeCount = static_cast<int>(config.guaranteeSlots.size());
-    if (config.fillerSlots + guaranteeCount != total) {
-        throw ConfigError(std::format("{}: {} filler + {} guarantee slots doesn't match {} cards per pack",
-                                      config.setCode, config.fillerSlots, guaranteeCount, total));
-    }
-
-    // How many guarantee slots claim each position (parentheses: total elements, all 0)
-    std::vector<int> claims(total, 0);
-    for (const auto& slot : config.guaranteeSlots) {
-        if (slot.slotIndex < 1 || slot.slotIndex > total) {
-            throw ConfigError(std::format("{}: slot {} is outside the pack (1 to {})", config.setCode,
-                                          slot.slotIndex, total));
-        }
-        if (++claims[slot.slotIndex - 1] > 1) {
-            throw ConfigError(std::format("{}: slot {} is defined twice", config.setCode, slot.slotIndex));
-        }
-    }
-}
-
-} // namespace
 
 PackOpener::PackOpener()
     : m_rng(std::random_device{}())
@@ -73,7 +41,9 @@ std::string PackOpener::rollSlot(const SlotTable& slot)
 
 std::vector<std::string> PackOpener::openPack(const PackConfig& config)
 {
-    checkPackLayout(config);
+    // Loaded configs were already checked, but one from built-in code may not have been
+    // A bad slotIndex below would write outside the vector (undefined behaviour)
+    validatePackLayout(config);
 
     // Start with every position as filler (parentheses: total copies of fillerPool)
     std::vector<std::string> pack(config.totalCardsPerPack, config.fillerPool);

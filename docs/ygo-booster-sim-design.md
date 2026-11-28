@@ -161,7 +161,7 @@ Writing the position in the file, rather than relying on a hidden rule like "gua
 
 (The alternative, "guarantee slots fill the last positions in listed order", would save one line per slot but hide the layout in code. It was rejected in Stage 1.)
 
-A pack's layout is also rejected with `ConfigError` if it has no cards, if `filler_slots` plus the number of guarantee slots doesn't equal `total_cards_per_pack`, or if a guarantee `slot_index` is outside the pack or used twice. Positions not claimed by a guarantee slot are filler.
+A pack's layout is also rejected with `ConfigError` if it has no cards, if `filler_slots` plus the number of guarantee slots doesn't equal `total_cards_per_pack`, or if a guarantee `slot_index` is outside the pack or used twice. Positions not claimed by a guarantee slot are filler. This check (`validatePackLayout`) runs when the config is loaded, so a bad file fails at startup with its file name in the message, and again in `openPack`, because a config built in code skips the loader and a bad `slot_index` would otherwise write outside the pack (undefined behaviour). The check is cheap, so running it twice costs nothing noticeable.
 
 **Key edge case:** seed `std::mt19937` once per session (or persist RNG state) — do not reseed per pack, or rapid "open all" clicks with a time-based seed can produce correlated results.
 

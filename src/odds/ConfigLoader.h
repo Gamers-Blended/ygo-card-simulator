@@ -18,6 +18,7 @@ namespace ygo::odds {
 // - a field is missing, has the wrong type, or is an empty string
 // - a table entry has zero or several odds keys, or "remainder" isn't true
 // - a table breaks a normalize() rule (see Normalize.h)
+// - the slots don't fit the pack (see validatePackLayout() in PackLayout.h)
 // Messages name the place in the file, e.g. "guarantee_slots[0].table[2]: ..."
 PackConfig parsePackConfig(std::string_view jsonText);
 

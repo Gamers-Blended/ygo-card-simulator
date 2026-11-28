@@ -100,41 +100,14 @@ TEST(PackOpener, GuaranteeSlotsGoToTheirSlotIndex)
     EXPECT_EQ(pack[8], "Common");
 }
 
-// --- openPack rejects layouts that don't fit (design doc Section 7) ---
+// --- openPack still checks layout (each rule is tested in PackLayoutTests.cpp) ---
 
-TEST(PackOpener, RejectsPackWithNoCards)
-{
-    odds::PackOpener opener{kSeed};
-    odds::PackConfig config = packWith(0, {});
-    config.totalCardsPerPack = 0;
-
-    EXPECT_THROW(opener.openPack(config), odds::ConfigError);
-}
-
-TEST(PackOpener, RejectsSlotCountThatDoesNotMatchPackSize)
+TEST(PackOpener, OpenPackRejectsBadLayout)
 {
     odds::PackOpener opener{kSeed};
 
-    // 7 filler + 1 guarantee = 8, but the pack has 9 cards
-    EXPECT_THROW(opener.openPack(packWith(7, {certainSlot(9, "Rare")})), odds::ConfigError);
-}
-
-TEST(PackOpener, RejectsSlotIndexOutsideThePack)
-{
-    odds::PackOpener opener{kSeed};
-
-    for (const int bad : {0, -1, 10}) {
-        SCOPED_TRACE(bad);
-        EXPECT_THROW(opener.openPack(packWith(8, {certainSlot(bad, "Rare")})), odds::ConfigError);
-    }
-}
-
-TEST(PackOpener, RejectsSameSlotIndexTwice)
-{
-    odds::PackOpener opener{kSeed};
-
-    EXPECT_THROW(opener.openPack(packWith(7, {certainSlot(9, "Rare"), certainSlot(9, "Super Rare")})),
-                 odds::ConfigError);
+    // Slot 10 in a 9-card pack: without the check, openPack would write past the end of the pack
+    EXPECT_THROW(opener.openPack(packWith(8, {certainSlot(10, "Rare")})), odds::ConfigError);
 }
 
 // --- Long-run frequencies ---

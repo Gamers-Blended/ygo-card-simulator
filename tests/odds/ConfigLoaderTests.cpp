@@ -194,6 +194,28 @@ TEST(ConfigLoader, NormalizeRulesStillApply)
                           "more than 1");
 }
 
+TEST(ConfigLoader, RejectsBadLayoutAtLoadTime)
+{
+    // Every field is fine on its own, but 7 filler + 1 guarantee slot is 8 cards, not 9
+    expectErrorContaining(R"(
+{
+  "set_code": "LOB",
+  "total_cards_per_pack": 9,
+  "filler_slots": 7,
+  "filler_pool": "Common",
+  "guarantee_slots": [
+    {
+      "slot_index": 9,
+      "table": [
+        { "rarity": "Rare", "remainder": true }
+      ]
+    }
+  ]
+}
+)",
+                          "doesn't match 9 cards per pack");
+}
+
 // --- Loading from a file ---
 
 TEST(ConfigLoader, LoadsLobFile)

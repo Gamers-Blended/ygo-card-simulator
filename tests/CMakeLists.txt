@@ -7,6 +7,7 @@ find_package(GTest CONFIG REQUIRED)
 add_executable(odds_tests
     odds/ConfigLoaderTests.cpp
     odds/NormalizeTests.cpp
+    odds/PackLayoutTests.cpp
     odds/PackOpenerTests.cpp
 )
 # gtest_main supplies main(), which runs every TEST() in the program
